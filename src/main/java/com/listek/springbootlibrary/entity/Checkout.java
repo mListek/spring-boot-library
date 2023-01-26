@@ -22,7 +22,7 @@ public class Checkout {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_emali")
+    @Column(name = "user_email")
     private String userEmail;
 
     @Column(name = "checkout_date")
