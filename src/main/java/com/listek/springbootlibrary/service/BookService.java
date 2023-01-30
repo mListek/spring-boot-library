@@ -2,8 +2,10 @@ package com.listek.springbootlibrary.service;
 
 import com.listek.springbootlibrary.dao.BookRepository;
 import com.listek.springbootlibrary.dao.CheckoutRepository;
+import com.listek.springbootlibrary.dao.HistoryRepository;
 import com.listek.springbootlibrary.entity.Book;
 import com.listek.springbootlibrary.entity.Checkout;
+import com.listek.springbootlibrary.entity.History;
 import com.listek.springbootlibrary.responsemodels.ShelfCurrentLoansResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +26,13 @@ public class BookService {
 
     private CheckoutRepository checkoutRepository;
 
-    public BookService(BookRepository bookRepository, CheckoutRepository checkoutRepository) {
+    private HistoryRepository historyRepository;
+
+    public BookService(BookRepository bookRepository, CheckoutRepository checkoutRepository,
+                       HistoryRepository historyRepository) {
         this.bookRepository = bookRepository;
         this.checkoutRepository = checkoutRepository;
+        this.historyRepository = historyRepository;
     }
 
     public Book checkoutBook(String userEmail, Long bookId) throws Exception {
@@ -108,13 +114,25 @@ public class BookService {
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (!book.isPresent() || validateCheckout == null) {
-            throw new Exception("Book does not exists or not checked out by user");
+            throw new Exception("Book does not exist or not checked out by user");
         }
 
         book.get().setCopiesAvailable(book.get().getCopiesAvailable() + 1);
 
         bookRepository.save(book.get());
         checkoutRepository.deleteById(validateCheckout.getId());
+
+        History history = new History(
+                userEmail,
+                validateCheckout.getCheckoutDate(),
+                LocalDate.now().toString(),
+                book.get().getTitle(),
+                book.get().getAuthor(),
+                book.get().getDescription(),
+                book.get().getImg()
+        );
+
+        historyRepository.save(history);
     }
 
     public void renewLoan(String userEmail, Long bookId) throws Exception {
@@ -122,7 +140,7 @@ public class BookService {
         Checkout validateCheckout = checkoutRepository.findByUserEmailAndBookId(userEmail, bookId);
 
         if (validateCheckout == null) {
-            throw new Exception("Book does not exits or not checked out by user");
+            throw new Exception("Book does not exit or not checked out by user");
         }
 
         SimpleDateFormat sdFormat = new SimpleDateFormat("yyyy-MM-dd");
